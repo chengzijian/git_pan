@@ -29,18 +29,58 @@ class BuildProjects(object):
             else:
                 time.sleep(interval)
 
-    # 输出日志信息
-    def printOutputLogs(self):
-        if len(self.log_list):
-            for log in self.log_list:
-                sys.stdout.write('#%s ' % str(log[0]))
-                sys.stdout.write(log[1].encode("utf8"))
-                sys.stdout.write(log[3])
-                sys.stdout.write('\r')
-            sys.stdout.flush()
-        else:
-            sys.stdout.write(u"没有日志")
-            sys.stdout.flush()
+    '''
+        获取指定任务的执行进度
+    '''
+
+    def conCurrentProgress(self, number):
+        url = '%sjob/%s/buildHistory/ajax' % (TARGET_HOST, PROJECT_NAME)
+        r = requests.get(url, headers={'n': str(number[0])})
+        if r.ok:
+            root = etree.HTML(r.text)
+            trs = root.xpath(".//table/tr")
+            if len(trs):
+                log_list = []
+                for tr in trs:
+                    build_desc = tr.xpath(".//div[@class='pane desc indent-multiline']")
+                    if len(build_desc):
+                        # 不为空说明，当前是构建状态
+                        display_name = tr.xpath(".//div[@class='pane build-name']/a")[0].text
+                        details = build_desc[0].text
+                        tooltip = tr.xpath(".//a[@class='build-status-link']/img")[0].attrib['tooltip']
+                        tooltip = tooltip[0: tooltip.index('>')].strip()
+                        if tooltip == u'In progress':
+                            td = tr.xpath(".//div[@class='pane build-details']/table/tbody/tr/td")
+                            build_progress = u'（%s）' % td[0].attrib['style'].replace('width:', '').replace(';', '')
+                        elif tooltip == u'Success':
+                            build_progress = u'（构建完成）'
+                        elif tooltip == u'Aborted':
+                            build_progress = u'（取消构建）'
+                        elif tooltip == u'Failed':
+                            build_progress = u'（构建失败）'
+                        else:
+                            build_progress = u'（%s）' % tooltip
+                    else:
+                        try:
+                            display_name = tr.xpath(".//div[@class='display-name']")[0].text
+                            details = tr.xpath(".//div[@class='pane build-details indent-multiline']")[0].text.strip()
+                            build_progress = u'（排队中）'
+                        except:
+                            pass
+
+                    log_list.append(u'%s %s %s' % (display_name, details, build_progress))
+
+                if len(log_list):
+                    log_list.reverse()
+                    os.system('clear')
+                    for log in log_list:
+                        sys.stdout.write(log)
+                        sys.stdout.write('\n')
+
+                    sys.stdout.write('\r')
+                    sys.stdout.flush()
+                    return 'Success'
+        return None
 
     # 更新构建任务的进度并打印
     def updateAndPrintLogMsg(self, tempNumber=None):
@@ -52,36 +92,8 @@ class BuildProjects(object):
         # 每5秒更新一次进度信息
         self.waitfor(self.conCurrentProgress, 5, number)
 
-        self.updateLogs(number, 100)
-        self.printOutputLogs()
-
         time.sleep(3)
         self.updateAndPrintLogMsg(number)
-
-    # 更新日志信息
-    def updateLogs(self, number, progress):
-        if len(self.log_list):
-            for log in self.log_list:
-                if log[0] == number[0]:
-                    log[3] = '(%s%%)  ' % progress
-
-    '''
-        获取指定任务的执行进度
-    '''
-
-    def conCurrentProgress(self, number):
-        url = '%sjob/%s/buildHistory/ajax' % (TARGET_HOST, PROJECT_NAME)
-        r = requests.post(url, headers={'n': str(number)})
-        if r.ok:
-            root = etree.HTML(r.text)
-            td = root.xpath(".//tbody/tr/td")
-            if td and len(td) == 2:
-                # print td[1].attrib['style'].replace('width:', '')
-                progress = td[0].attrib['style'].replace('width:', '').replace('%;', '')
-                self.updateLogs(number, progress)
-                self.printOutputLogs()
-                return progress
-        return None
 
     def run(self):
         path = os.path.dirname(os.path.realpath(__file__)).replace('/function', '')
@@ -109,17 +121,10 @@ class BuildProjects(object):
                         params.append(
                             {"name": self.lines[0][col].encode("utf8"), "value": self.lines[row][col].encode("utf8")})
 
-                    number = self.server.build_job(PROJECT_NAME, parameters={"parameter": params})
-                    # 创建任务日志
-                    job_info = self.server.get_job_info(PROJECT_NAME)
-                    build_info = self.server.get_build_info(PROJECT_NAME, number)
-                    self.log_list.append([job_info['lastBuild']['number'], build_info['description'],
-                                          build_info['building'], u'排队中'])
+                    self.server.build_job(PROJECT_NAME, parameters={"parameter": params})
 
-                # 打印日志信息
-                self.printOutputLogs()
-
-                # 更新构建任务的进度并打印
+                #### 到此为止，所有任务均已创建成功
+                # 开始打印日志
                 self.updateAndPrintLogMsg(0)
             else:
                 print("连接 Jenkins 失败！")
