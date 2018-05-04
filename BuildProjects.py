@@ -2,11 +2,11 @@
 import os
 import sys
 import time
+import json
 
-import jenkins
 import requests
 import xlrd
-
+import webbrowser
 from lxml import etree
 
 # Jenkins 服务地址
@@ -18,7 +18,6 @@ PROJECT_NAMES = ["MeMe-Android-Develop", "MeMe-Android-Release", "MeMe-Android-T
 
 class BuildProjects(object):
     def __init__(self):
-        self.server = jenkins.Jenkins(TARGET_HOST, timeout=5)
         self.log_list = []
         self.lines = []
         self.select = int(sys.argv[1])
@@ -96,16 +95,27 @@ class BuildProjects(object):
 
     # 更新构建任务的进度并打印
     def updateAndPrintLogMsg(self, tempNumber=None):
-        job_info = self.server.get_job_info(PROJECT_NAMES[self.select])
-        number = job_info['lastBuild']['number']  # 最后的任务
-        if tempNumber == number:
-            print('程序关闭')
-            return
-        # 每5秒更新一次进度信息
-        self.waitfor(self.conCurrentProgress, 5, number)
+        url = '%sjob/%s/api/json' % (TARGET_HOST, PROJECT_NAMES[self.select])
+        res = requests.get(url)
+        if res.ok:
+            job_info = json.loads(res.text)
+            number = job_info['lastBuild']['number']  # 最后的任务
+            if tempNumber == number:
+                print('结束运行')
+                return
 
-        time.sleep(3)
-        self.updateAndPrintLogMsg(number)
+            # 这里提供le两种查看log的方式。
+            # 1
+            # 每5秒更新一次进度信息
+            self.waitfor(self.conCurrentProgress, 5, number)
+
+            time.sleep(3)
+            self.updateAndPrintLogMsg(number)
+
+            # 2
+            # webbrowser.open('%sjob/%s/buildHistory/ajax' % (TARGET_HOST, PROJECT_NAMES[self.select]))
+        else:
+            print('无法获取队列信息')
 
     def run(self):
         path = os.path.dirname(os.path.realpath(__file__)).replace('/function', '')
@@ -154,7 +164,6 @@ class BuildProjects(object):
                     print('构建 %s 失败' % name)
 
             #### 到此为止，所有任务均已创建成功
-            # 开始打印日志
             time.sleep(3)
             self.updateAndPrintLogMsg(0)
 
