@@ -126,7 +126,7 @@ web.py==0.38
 webencodings==0.5.1
 websocket-client==0.46.0
 wechatpy==1.6.1
-Werkzeug==0.14.1
+Werkzeug==0.15.3
 wxpy==0.3.9.8
 xattr==0.6.4
 xlrd==1.1.0
