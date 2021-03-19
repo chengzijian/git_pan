@@ -32,7 +32,7 @@ ipaddress==1.0.19
 itchat==1.2.32
 itsdangerous==0.24
 jenkins==1.0.2
-Jinja2==2.10
+Jinja2==2.11.3
 kombu==4.1.0
 lxml==3.8.0
 macholib==1.5.1
