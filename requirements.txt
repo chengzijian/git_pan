@@ -43,7 +43,7 @@ modulegraph==0.10.4
 monkey==0.1
 multi-key-dict==2.0.3
 npm==0.1.1
-numpy==1.13.3
+numpy==1.22.0
 optional-django==0.1.0
 optionaldict==0.1.1
 pandas==0.22.0
