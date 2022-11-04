@@ -117,7 +117,7 @@ sklearn==0.0
 socketIO-client-2==0.7.5
 SQLAlchemy==1.1.4
 tinycss2==0.6.1
-Twisted==17.9.0
+Twisted==22.10.0
 urllib3==1.22
 vboxapi==1.0
 vine==1.1.4
